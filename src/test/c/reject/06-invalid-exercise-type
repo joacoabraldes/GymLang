@@ -1,0 +1,8 @@
+workout {
+    name=Natacion;
+    exercise {
+        type=swimming;
+        name=Crol;
+        duration=30;
+    }
+}

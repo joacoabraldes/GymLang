@@ -1,0 +1,9 @@
+workout {
+    name=Calistenia;
+    exercise {
+        type=strength;
+        name=Dominadas;
+        sets=5;
+        reps=8;
+    }
+}

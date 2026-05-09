@@ -1,0 +1,11 @@
+workout {
+    name=Pierna hipertrofia;
+    exercise {
+        type=hypertrophy;
+        name=Prensa de piernas;
+        sets=4;
+        reps=12;
+        weight=150;
+        rest=90;
+    }
+}

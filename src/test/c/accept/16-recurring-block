@@ -1,0 +1,36 @@
+workout {
+    name=Pecho;
+    exercise {
+        type=strength;
+        name=Press banca;
+        sets=4;
+        reps=5;
+        weight=100;
+    }
+}
+
+workout {
+    name=Espalda;
+    exercise {
+        type=strength;
+        name=Dominadas;
+        sets=4;
+        reps=8;
+    }
+}
+
+workout {
+    name=Piernas;
+    exercise {
+        type=strength;
+        name=Sentadilla;
+        sets=4;
+        reps=5;
+        weight=120;
+    }
+}
+
+recurring {
+    order=Pecho,Espalda,Piernas;
+    days=3,1;
+}

@@ -1,0 +1,11 @@
+workout {
+    name=Espalda hipertrofia;
+    exercise {
+        type=hypertrophy;
+        name=Remo bajo;
+        sets=3;
+        reps=8-12,8-12,6-10;
+        weight=60,60,70;
+        rest=90;
+    }
+}

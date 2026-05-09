@@ -1,0 +1,17 @@
+workout {
+    name=Tren superior;
+    warmup {
+        exercise {
+            type=cardio;
+            name=Cinta;
+            duration=5;
+        }
+    }
+    exercise {
+        type=strength;
+        name=Press banca;
+        sets=4;
+        reps=5;
+        weight=80;
+    }
+}

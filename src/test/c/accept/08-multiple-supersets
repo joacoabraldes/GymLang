@@ -1,0 +1,33 @@
+workout {
+    name=Brazos completos;
+    superset {
+        rounds=3;
+        rest=60;
+        exercise {
+            type=hypertrophy;
+            name=Curl biceps mancuerna;
+            reps=12;
+            weight=15;
+        }
+        exercise {
+            type=hypertrophy;
+            name=Triceps en polea;
+            reps=12;
+            weight=20;
+        }
+    }
+    superset {
+        rounds=2;
+        exercise {
+            type=hypertrophy;
+            name=Curl martillo;
+            reps=10;
+            weight=14;
+        }
+        exercise {
+            type=hypertrophy;
+            name=Fondos en banca;
+            reps=10;
+        }
+    }
+}

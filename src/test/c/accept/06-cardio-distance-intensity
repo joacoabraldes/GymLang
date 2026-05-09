@@ -1,0 +1,10 @@
+workout {
+    name=Cardio largo;
+    exercise {
+        type=cardio;
+        name=Trote en pista;
+        duration=45;
+        distance=8000;
+        intensity=6;
+    }
+}

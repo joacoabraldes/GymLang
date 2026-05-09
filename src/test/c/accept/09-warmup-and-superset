@@ -1,0 +1,36 @@
+workout {
+    name=Empuje;
+    description=push day;
+    warmup {
+        exercise {
+            type=cardio;
+            name=Bici;
+            duration=8;
+            intensity=4;
+        }
+    }
+    exercise {
+        type=strength;
+        name=Press banca;
+        sets=4;
+        reps=5;
+        weight=90;
+        rest=180;
+    }
+    superset {
+        rounds=3;
+        rest=60;
+        exercise {
+            type=hypertrophy;
+            name=Aperturas;
+            reps=12;
+            weight=14;
+        }
+        exercise {
+            type=hypertrophy;
+            name=Triceps polea;
+            reps=12;
+            weight=22;
+        }
+    }
+}

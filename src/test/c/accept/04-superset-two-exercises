@@ -1,0 +1,20 @@
+workout {
+    name=Brazos;
+    superset {
+        rounds=3;
+        exercise {
+            type=hypertrophy;
+            name=Curl biceps;
+            sets=1;
+            reps=12;
+            weight=15;
+        }
+        exercise {
+            type=hypertrophy;
+            name=Triceps polea;
+            sets=1;
+            reps=12;
+            weight=20;
+        }
+    }
+}

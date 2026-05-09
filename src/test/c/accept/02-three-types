@@ -1,0 +1,22 @@
+workout {
+    name=Full body;
+    exercise {
+        type=strength;
+        name=Sentadilla;
+        sets=4;
+        reps=6;
+        weight=80;
+    }
+    exercise {
+        type=cardio;
+        name=Cinta;
+        duration=15;
+    }
+    exercise {
+        type=hypertrophy;
+        name=Curl biceps;
+        sets=3;
+        reps=12;
+        weight=15;
+    }
+}

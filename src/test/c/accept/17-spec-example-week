@@ -1,0 +1,80 @@
+/*
+ * Cód. 6.1 del PDF de la consigna: dos rutinas con reps y peso variables por
+ * set (listas y rangos) y una planificación semanal mediante el bloque week.
+ */
+workout {
+    name=Tren Superior;
+    description=push y pull;
+
+    warmup {
+        exercise {
+            type=cardio;
+            name=Cinta;
+            duration=5;
+            intensity=3;
+        }
+    }
+
+    exercise {
+        type=strength;
+        name=Press banca;
+        sets=4;
+        reps=5;
+        weight=100;
+        rest=180;
+        tempo=3-1-2-0;
+    }
+
+    exercise {
+        type=strength;
+        name=RDL;
+        sets=3;
+        reps=1-3,5-8,5-8;
+        weight=120,100,100;
+        rest=120;
+    }
+
+    superset {
+        rounds=3;
+        rest=60;
+        exercise {
+            type=hypertrophy;
+            name=Biceps curl;
+            reps=10,10,8;
+            weight=20;
+        }
+        exercise {
+            type=hypertrophy;
+            name=Fondos;
+            reps=12;
+        }
+    }
+}
+
+workout {
+    name=Tren Inferior;
+
+    exercise {
+        type=strength;
+        name=Sentadilla;
+        sets=4;
+        reps=6,6,8,8;
+        weight=100,100,90,90;
+        rest=180;
+    }
+
+    exercise {
+        type=hypertrophy;
+        name=Extension de cuadriceps;
+        sets=3;
+        reps=12-15;
+        weight=50;
+        rest=60;
+    }
+}
+
+week {
+    mon=Tren Superior;
+    tue=Tren Inferior;
+    fri=Tren Superior;
+}

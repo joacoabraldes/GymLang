@@ -1,0 +1,72 @@
+/*
+ * Cód. 6.2 del PDF de la consigna: tres rutinas con dropset como atributo del
+ * último set y planificación recurrente (3 días sí, 1 día no).
+ */
+workout {
+    name=Pecho;
+    exercise {
+        type=strength;
+        name=Press de banca;
+        sets=4;
+        reps=8,8,6,6;
+        weight=70,70,80,80;
+        rest=120;
+        dropset=50,40;
+    }
+    exercise {
+        type=hypertrophy;
+        name=Aperturas con mancuernas;
+        sets=3;
+        reps=12;
+        weight=18;
+        rest=60;
+    }
+}
+
+workout {
+    name=Espalda;
+    exercise {
+        type=strength;
+        name=Dominadas;
+        sets=4;
+        reps=6,6,5,5;
+        weight=20;
+        rest=120;
+        dropset=0;
+        dropset_reps=6;
+    }
+    exercise {
+        type=hypertrophy;
+        name=Remo con barra;
+        sets=3;
+        reps=10,10,8;
+        weight=60,60,70;
+        rest=90;
+    }
+}
+
+workout {
+    name=Piernas;
+    exercise {
+        type=strength;
+        name=Sentadilla;
+        sets=4;
+        reps=5;
+        weight=100,100,90,80;
+        rest=180;
+        dropset=60,50;
+    }
+    exercise {
+        type=hypertrophy;
+        name=Prensa de piernas;
+        sets=3;
+        reps=12-15;
+        weight=150;
+        rest=90;
+    }
+}
+
+recurring {
+    order=Pecho,Espalda,Piernas;
+    days=3,1;
+}
