@@ -21,6 +21,7 @@
 # Application specific.
 /program
 /subexp
+output.html
 BisonParser.c
 BisonParser.h
 FlexScanner.c

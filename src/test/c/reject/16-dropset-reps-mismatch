@@ -1,0 +1,12 @@
+workout {
+    name=Pecho;
+    exercise {
+        type=strength;
+        name=Press banca;
+        sets=4;
+        reps=5;
+        weight=80;
+        dropset=50,40;
+        dropset_reps=6;
+    }
+}

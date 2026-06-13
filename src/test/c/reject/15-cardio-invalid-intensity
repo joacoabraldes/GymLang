@@ -1,0 +1,9 @@
+workout {
+    name=Cardio;
+    exercise {
+        type=cardio;
+        name=Cinta;
+        duration=20;
+        intensity=15;
+    }
+}

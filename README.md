@@ -4,11 +4,17 @@
 
 # GymLang
 
-A base compiler example, developed with Flex and Bison.
+GymLang is a domain-specific language to describe gym training routines and their schedule, and
+compile them into an interactive HTML page. The compiler is written in C with Flex (lexer) and
+Bison (parser), and implements the three phases: lexical/syntactic analysis (frontend), semantic
+analysis and code generation (backend).
+
+The full specification and design notes are available under [doc/](doc/).
 
 * [Requirements](#requirements)
 * [Configuration](#configuration)
 * [Commands](#commands)
+* [Output](#output)
 * [CI/CD](#cicd)
 * [Recommended Extensions](#recommended-extensions)
 
@@ -63,6 +69,13 @@ Executes every available unit-test under `src/test/c` folder:
 ```bash
 src/main/bash/test.sh
 ```
+
+## Output
+
+When a program is accepted, the compiler writes a self-contained `output.html` file in the current
+directory. Open it in any browser (no server required) to see every workout rendered by blocks, a
+set-by-set breakdown, the session summary (volume, total sets and estimated time) and a simulated
+clock with an adjustable speed multiplier that walks through the schedule.
 
 ### Stop
 

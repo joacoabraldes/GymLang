@@ -9,7 +9,9 @@
 ModuleDestructor initializeGeneratorModule();
 
 /**
- * Stage 2 stub: HTML generation is deferred to a later stage.
+ * Translates the validated AST into a self-contained, interactive HTML file
+ * that renders every workout, its blocks and the training schedule, together
+ * with the session summary (volume, total sets and estimated time).
  */
 void executeGenerator(CompilerState * compilerState);
 

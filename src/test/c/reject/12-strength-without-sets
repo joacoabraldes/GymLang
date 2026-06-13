@@ -1,0 +1,9 @@
+workout {
+    name=Pecho;
+    exercise {
+        type=strength;
+        name=Press banca;
+        reps=5;
+        weight=100;
+    }
+}
