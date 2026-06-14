@@ -22,7 +22,6 @@ ModuleDestructor initializeGeneratorModule() {
 #define OUTPUT_PATH "output.html"
 #define DEFAULT_REST_SECONDS 90
 #define DEFAULT_SECONDS_PER_REP 4
-#define SCHEDULE_PREVIEW_LIMIT 28
 
 typedef struct {
 	long volume;
@@ -334,9 +333,9 @@ static void _emitSuperset(FILE * out, const Superset * superset) {
 }
 
 static void _emitWorkout(FILE * out, const Workout * workout) {
-	fputs("<article class=\"workout\" data-name=", out);
-	_emitJsonString(out, workout->name);
-	fputs(">\n<h2>", out);
+	fputs("<article class=\"workout\" data-name=\"", out);
+	_emitEscaped(out, workout->name);
+	fputs("\">\n<h2>", out);
 	_emitEscaped(out, workout->name);
 	fputs("</h2>\n", out);
 	if (workout->description != NULL) {
@@ -370,39 +369,29 @@ static void _emitWorkout(FILE * out, const Workout * workout) {
 	fputs("</footer>\n</article>\n", out);
 }
 
-static const char * _dayLabel(DayOfWeek day) {
-	switch (day) {
-		case DAY_MON: return "Lunes";
-		case DAY_TUE: return "Martes";
-		case DAY_WED: return "Miercoles";
-		case DAY_THU: return "Jueves";
-		case DAY_FRI: return "Viernes";
-		case DAY_SAT: return "Sabado";
-		case DAY_SUN: return "Domingo";
+static const char * _weekdayLabel(int index) {
+	switch (index) {
+		case 0: return "Lunes";
+		case 1: return "Martes";
+		case 2: return "Miercoles";
+		case 3: return "Jueves";
+		case 4: return "Viernes";
+		case 5: return "Sabado";
+		case 6: return "Domingo";
 		default: return "";
 	}
 }
 
-static void _emitWeekSchedule(FILE * out, const WeekBlock * week) {
-	const char * assignment[7] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static void _buildWeekSchedule(const WeekBlock * week, const char * schedule[7]) {
+	for (int day = 0; day < 7; ++day) {
+		schedule[day] = NULL;
+	}
 	for (WeekAssignmentList * node = week->assignments; node != NULL; node = node->next) {
-		assignment[node->assignment->day] = node->assignment->workoutName;
+		schedule[node->assignment->day] = node->assignment->workoutName;
 	}
-	fputs("<section class=\"schedule\"><h2>Planificacion semanal</h2><div class=\"week\">\n", out);
-	for (int day = DAY_MON; day <= DAY_SUN; ++day) {
-		fprintf(out, "<div class=\"day-cell\" data-index=\"%d\"><span class=\"day\">%s</span><span class=\"target\">", day, _dayLabel(day));
-		if (assignment[day] != NULL) {
-			_emitEscaped(out, assignment[day]);
-		}
-		else {
-			fputs("Descanso", out);
-		}
-		fputs("</span></div>\n", out);
-	}
-	fputs("</div></section>\n", out);
 }
 
-static void _emitRecurringSchedule(FILE * out, const RecurringBlock * recurring, int * previewLength) {
+static void _buildRecurringSchedule(const RecurringBlock * recurring, const char * schedule[7]) {
 	int orderLength = 0;
 	const char * order[64];
 	for (StringList * node = recurring->order; node != NULL && orderLength < 64; node = node->next) {
@@ -411,23 +400,38 @@ static void _emitRecurringSchedule(FILE * out, const RecurringBlock * recurring,
 	int training = recurring->days != NULL ? recurring->days->value : 0;
 	int rest = (recurring->days != NULL && recurring->days->next != NULL) ? recurring->days->next->value : 0;
 	int cycle = training + rest;
-	int preview = cycle * orderLength;
-	if (preview <= 0) {
-		preview = cycle;
-	}
-	if (preview > SCHEDULE_PREVIEW_LIMIT) {
-		preview = SCHEDULE_PREVIEW_LIMIT;
-	}
-	*previewLength = preview;
-
-	fprintf(out, "<section class=\"schedule\"><h2>Planificacion recurrente</h2><p class=\"description\">%d dias de entrenamiento, %d de descanso.</p><div class=\"cycle\">\n", training, rest);
-	for (int day = 0; day < preview; ++day) {
+	for (int day = 0; day < 7; ++day) {
 		int position = cycle > 0 ? day % cycle : 0;
-		fprintf(out, "<div class=\"cycle-cell\" data-index=\"%d\"><span class=\"day\">Dia %d</span><span class=\"target\">", day, day + 1);
 		if (cycle > 0 && position < training && orderLength > 0) {
 			int completedCycles = day / cycle;
-			int workoutIndex = (completedCycles * training + position) % orderLength;
-			_emitEscaped(out, order[workoutIndex]);
+			schedule[day] = order[(completedCycles * training + position) % orderLength];
+		}
+		else {
+			schedule[day] = NULL;
+		}
+	}
+}
+
+static void _emitScheduleSection(FILE * out, ScheduleType type, const char * schedule[7]) {
+	fputs("<section class=\"schedule\">", out);
+	if (type == SCHEDULE_WEEK) {
+		fputs("<h2>Planificacion semanal</h2>", out);
+	}
+	else {
+		fputs("<h2>Planificacion recurrente</h2>", out);
+	}
+	fputs("<p id=\"today\" class=\"today\"></p>\n<div class=\"week\">\n", out);
+	for (int day = 0; day < 7; ++day) {
+		fprintf(out, "<div class=\"day-cell\" data-index=\"%d\"><span class=\"day\">", day);
+		if (type == SCHEDULE_WEEK) {
+			fputs(_weekdayLabel(day), out);
+		}
+		else {
+			fprintf(out, "Dia %d", day + 1);
+		}
+		fputs("</span><span class=\"target\">", out);
+		if (schedule[day] != NULL) {
+			_emitEscaped(out, schedule[day]);
 		}
 		else {
 			fputs("Descanso", out);
@@ -457,11 +461,12 @@ static void _emitHead(FILE * out) {
 		"main{max-width:1024px;margin:0 auto;padding:24px;}\n"
 		"h2{font-size:20px;margin:28px 0 12px;}\n"
 		"h3{font-size:15px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:18px 0 10px;}\n"
-		".schedule .week,.schedule .cycle{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;}\n"
-		".day-cell,.cycle-cell{background:var(--card);border:1px solid var(--soft);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;}\n"
-		".day-cell .day,.cycle-cell .day{font-size:12px;color:var(--muted);text-transform:uppercase;}\n"
-		".day-cell .target,.cycle-cell .target{font-weight:600;}\n"
-		".day-cell.active,.cycle-cell.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);}\n"
+		".schedule .week{display:grid;grid-template-columns:repeat(7,minmax(100px,1fr));gap:10px;}\n"
+		".today{font-size:15px;color:var(--accent);font-weight:600;margin:4px 0 12px;}\n"
+		".day-cell{background:var(--card);border:1px solid var(--soft);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;}\n"
+		".day-cell .day{font-size:12px;color:var(--muted);text-transform:uppercase;}\n"
+		".day-cell .target{font-weight:600;}\n"
+		".day-cell.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);}\n"
 		".workout{background:var(--card);border:1px solid var(--soft);border-radius:14px;padding:20px;margin:18px 0;}\n"
 		".workout h2{margin-top:0;}\n"
 		".description{color:var(--muted);margin:4px 0 12px;}\n"
@@ -488,40 +493,59 @@ static void _emitHead(FILE * out) {
 		".summary{display:flex;gap:24px;margin-top:16px;padding-top:14px;border-top:1px solid var(--soft);}\n"
 		".summary .metric{font-size:22px;font-weight:700;display:block;}\n"
 		".summary .caption{font-size:12px;color:var(--muted);}\n"
+		".rest-banner{background:var(--card);border:1px solid var(--soft);border-radius:14px;padding:48px 24px;margin:18px 0;text-align:center;font-size:20px;color:var(--muted);}\n"
+		"[hidden]{display:none !important;}\n"
 		"</style>\n"
 		"</head>\n"
 		"<body>\n"
 		"<header class=\"top\">\n"
 		"<h1>GymLang</h1>\n"
-		"<div class=\"speed\"><label for=\"speed\">Velocidad</label><input id=\"speed\" type=\"range\" min=\"1\" max=\"1440\" value=\"120\"><span id=\"speedValue\">120 min/s</span></div>\n"
+		"<div class=\"speed\"><label for=\"speed\">Velocidad</label><input id=\"speed\" type=\"range\" min=\"1\" max=\"1440\" value=\"60\"><span id=\"speedValue\">60 min/s</span></div>\n"
 		"<div class=\"clock-box\"><span>Reloj simulado</span><span id=\"clock\">--</span></div>\n"
 		"</header>\n"
 		"<main>\n",
 		out);
 }
 
-static void _emitScripts(FILE * out, const Program * program, int previewLength) {
+static void _emitScripts(FILE * out, ScheduleType type, bool hasSchedule, const char * schedule[7]) {
 	fputs("<script>\n", out);
-	fputs("var GYM = ", out);
-	if (program->schedule == NULL) {
-		fputs("{type:\"none\"};\n", out);
+	fputs("var GYM = {type:", out);
+	if (!hasSchedule) {
+		fputs("\"none\"", out);
 	}
-	else if (program->schedule->type == SCHEDULE_WEEK) {
-		fputs("{type:\"week\"};\n", out);
+	else if (type == SCHEDULE_WEEK) {
+		fputs("\"week\"", out);
 	}
 	else {
-		fprintf(out, "{type:\"recurring\",previewLength:%d};\n", previewLength);
+		fputs("\"recurring\"", out);
 	}
+	fputs(",schedule:[", out);
+	if (hasSchedule) {
+		for (int day = 0; day < 7; ++day) {
+			if (day > 0) {
+				fputc(',', out);
+			}
+			if (schedule[day] != NULL) {
+				_emitJsonString(out, schedule[day]);
+			}
+			else {
+				fputs("null", out);
+			}
+		}
+	}
+	fputs("]};\n", out);
 	fputs(
 		"(function(){\n"
 		"var speed=document.getElementById('speed');\n"
 		"var speedValue=document.getElementById('speedValue');\n"
 		"var clock=document.getElementById('clock');\n"
+		"var today=document.getElementById('today');\n"
+		"var restBanner=document.getElementById('rest-banner');\n"
+		"var workouts=Array.prototype.slice.call(document.querySelectorAll('.workout'));\n"
 		"var days=['Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo'];\n"
-		"var minutes=0;var last=null;var timers=[];\n"
+		"var minutes=0;var last=null;var timers=[];var currentDay=-1;\n"
 		"function setupTimers(){\n"
-		"  var buttons=document.querySelectorAll('.timer');\n"
-		"  buttons.forEach(function(button){\n"
+		"  document.querySelectorAll('.timer').forEach(function(button){\n"
 		"    button.addEventListener('click',function(){\n"
 		"      var seconds=parseInt(button.getAttribute('data-rest'),10);\n"
 		"      timers.push({button:button,remaining:seconds,label:button.textContent});\n"
@@ -536,24 +560,25 @@ static void _emitScripts(FILE * out, const Program * program, int previewLength)
 		"    else{timer.button.textContent='Descansando '+Math.ceil(timer.remaining)+' s';}\n"
 		"  }\n"
 		"}\n"
-		"function highlight(){\n"
-		"  var totalDays=Math.floor(minutes/1440);\n"
-		"  if(GYM.type==='week'){\n"
-		"    var index=totalDays%7;\n"
-		"    document.querySelectorAll('.day-cell').forEach(function(cell){\n"
-		"      cell.classList.toggle('active',parseInt(cell.getAttribute('data-index'),10)===index);\n"
-		"    });\n"
-		"  }else if(GYM.type==='recurring'){\n"
-		"    var index=totalDays%GYM.previewLength;\n"
-		"    document.querySelectorAll('.cycle-cell').forEach(function(cell){\n"
-		"      cell.classList.toggle('active',parseInt(cell.getAttribute('data-index'),10)===index);\n"
-		"    });\n"
+		"function applyDay(index){\n"
+		"  document.querySelectorAll('.day-cell').forEach(function(cell){\n"
+		"    cell.classList.toggle('active',parseInt(cell.getAttribute('data-index'),10)===index);\n"
+		"  });\n"
+		"  var target=GYM.schedule[index];\n"
+		"  if(target){\n"
+		"    workouts.forEach(function(card){card.hidden=card.getAttribute('data-name')!==target;});\n"
+		"    if(restBanner){restBanner.hidden=true;}\n"
+		"    if(today){today.textContent='Hoy: '+target;}\n"
+		"  }else{\n"
+		"    workouts.forEach(function(card){card.hidden=true;});\n"
+		"    if(restBanner){restBanner.hidden=false;}\n"
+		"    if(today){today.textContent='Hoy toca descansar';}\n"
 		"  }\n"
 		"}\n"
 		"function format(){\n"
 		"  var totalDays=Math.floor(minutes/1440);var minuteOfDay=Math.floor(minutes%1440);\n"
 		"  var hh=String(Math.floor(minuteOfDay/60)).padStart(2,'0');var mm=String(minuteOfDay%60).padStart(2,'0');\n"
-		"  return days[totalDays%7]+' '+hh+':'+mm;\n"
+		"  return days[((totalDays%7)+7)%7]+' '+hh+':'+mm;\n"
 		"}\n"
 		"function loop(now){\n"
 		"  if(last===null){last=now;}\n"
@@ -562,11 +587,15 @@ static void _emitScripts(FILE * out, const Program * program, int previewLength)
 		"  speedValue.textContent=perSecond+' min/s';\n"
 		"  minutes+=deltaSeconds*perSecond;\n"
 		"  clock.textContent=format();\n"
-		"  highlight();\n"
+		"  if(GYM.type!=='none'){\n"
+		"    var index=((Math.floor(minutes/1440)%7)+7)%7;\n"
+		"    if(index!==currentDay){currentDay=index;applyDay(index);}\n"
+		"  }\n"
 		"  updateTimers(deltaSeconds*perSecond*60);\n"
 		"  requestAnimationFrame(loop);\n"
 		"}\n"
 		"setupTimers();\n"
+		"if(GYM.type!=='none'){applyDay(0);currentDay=0;}\n"
 		"requestAnimationFrame(loop);\n"
 		"})();\n"
 		"</script>\n"
@@ -589,21 +618,26 @@ void executeGenerator(CompilerState * compilerState) {
 		return;
 	}
 	_emitHead(out);
-	int previewLength = 0;
-	if (program->schedule != NULL) {
-		if (program->schedule->type == SCHEDULE_WEEK) {
-			_emitWeekSchedule(out, program->schedule->week);
+	const char * schedule[7] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	bool hasSchedule = program->schedule != NULL;
+	ScheduleType type = SCHEDULE_WEEK;
+	if (hasSchedule) {
+		type = program->schedule->type;
+		if (type == SCHEDULE_WEEK) {
+			_buildWeekSchedule(program->schedule->week, schedule);
 		}
 		else {
-			_emitRecurringSchedule(out, program->schedule->recurring, &previewLength);
+			_buildRecurringSchedule(program->schedule->recurring, schedule);
 		}
+		_emitScheduleSection(out, type, schedule);
+		fputs("<div id=\"rest-banner\" class=\"rest-banner\" hidden>Hoy toca descansar</div>\n", out);
 	}
 	fputs("<section class=\"workouts\">\n", out);
 	for (WorkoutList * node = program->workouts; node != NULL; node = node->next) {
 		_emitWorkout(out, node->workout);
 	}
 	fputs("</section>\n</main>\n", out);
-	_emitScripts(out, program, previewLength);
+	_emitScripts(out, type, hasSchedule, schedule);
 	fclose(out);
 	logInformation(_logger, "Generated %s.", OUTPUT_PATH);
 }
