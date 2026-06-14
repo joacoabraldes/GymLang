@@ -507,20 +507,13 @@ static void _emitHead(FILE * out) {
 		out);
 }
 
-static void _emitScripts(FILE * out, ScheduleType type, bool hasSchedule, const char * schedule[7]) {
-	fputs("<script>\n", out);
-	fputs("var GYM = {type:", out);
-	if (!hasSchedule) {
-		fputs("\"none\"", out);
+static void _emitScripts(FILE * out, const Program * program, const char * schedule[7]) {
+	fputs("<script>\nvar GYM = {type:", out);
+	if (program->schedule == NULL) {
+		fputs("\"none\"};\n", out);
 	}
-	else if (type == SCHEDULE_WEEK) {
-		fputs("\"week\"", out);
-	}
-	else {
-		fputs("\"recurring\"", out);
-	}
-	fputs(",schedule:[", out);
-	if (hasSchedule) {
+	else if (program->schedule->type == SCHEDULE_WEEK) {
+		fputs("\"week\",schedule:[", out);
 		for (int day = 0; day < 7; ++day) {
 			if (day > 0) {
 				fputc(',', out);
@@ -532,8 +525,23 @@ static void _emitScripts(FILE * out, ScheduleType type, bool hasSchedule, const 
 				fputs("null", out);
 			}
 		}
+		fputs("]};\n", out);
 	}
-	fputs("]};\n", out);
+	else {
+		RecurringBlock * recurring = program->schedule->recurring;
+		int training = recurring->days != NULL ? recurring->days->value : 0;
+		int rest = (recurring->days != NULL && recurring->days->next != NULL) ? recurring->days->next->value : 0;
+		fprintf(out, "\"recurring\",train:%d,rest:%d,order:[", training, rest);
+		bool first = true;
+		for (StringList * node = recurring->order; node != NULL; node = node->next) {
+			if (!first) {
+				fputc(',', out);
+			}
+			first = false;
+			_emitJsonString(out, node->value);
+		}
+		fputs("]};\n", out);
+	}
 	fputs(
 		"(function(){\n"
 		"var speed=document.getElementById('speed');\n"
@@ -542,8 +550,10 @@ static void _emitScripts(FILE * out, ScheduleType type, bool hasSchedule, const 
 		"var today=document.getElementById('today');\n"
 		"var restBanner=document.getElementById('rest-banner');\n"
 		"var workouts=Array.prototype.slice.call(document.querySelectorAll('.workout'));\n"
+		"var cells=Array.prototype.slice.call(document.querySelectorAll('.day-cell'));\n"
 		"var days=['Lunes','Martes','Miercoles','Jueves','Viernes','Sabado','Domingo'];\n"
-		"var minutes=0;var last=null;var timers=[];var currentDay=-1;\n"
+		"var minutes=0;var last=null;var timers=[];var currentDay=-1;var currentWeek=null;\n"
+		"var schedule=GYM.schedule||[];\n"
 		"function setupTimers(){\n"
 		"  document.querySelectorAll('.timer').forEach(function(button){\n"
 		"    button.addEventListener('click',function(){\n"
@@ -560,11 +570,28 @@ static void _emitScripts(FILE * out, ScheduleType type, bool hasSchedule, const 
 		"    else{timer.button.textContent='Descansando '+Math.ceil(timer.remaining)+' s';}\n"
 		"  }\n"
 		"}\n"
+		"function workoutForDay(absoluteDay){\n"
+		"  var cycle=GYM.train+GYM.rest;\n"
+		"  var position=((absoluteDay%cycle)+cycle)%cycle;\n"
+		"  if(position<GYM.train){\n"
+		"    var trained=Math.floor(absoluteDay/cycle)*GYM.train+position;\n"
+		"    return GYM.order[((trained%GYM.order.length)+GYM.order.length)%GYM.order.length];\n"
+		"  }\n"
+		"  return null;\n"
+		"}\n"
+		"function renderWeek(weekStart){\n"
+		"  currentWeek=weekStart;\n"
+		"  if(GYM.type!=='recurring'){return;}\n"
+		"  schedule=[];\n"
+		"  for(var i=0;i<7;i++){\n"
+		"    var absoluteDay=weekStart+i;var name=workoutForDay(absoluteDay);schedule.push(name);\n"
+		"    cells[i].querySelector('.day').textContent='Dia '+(absoluteDay+1);\n"
+		"    cells[i].querySelector('.target').textContent=name?name:'Descanso';\n"
+		"  }\n"
+		"}\n"
 		"function applyDay(index){\n"
-		"  document.querySelectorAll('.day-cell').forEach(function(cell){\n"
-		"    cell.classList.toggle('active',parseInt(cell.getAttribute('data-index'),10)===index);\n"
-		"  });\n"
-		"  var target=GYM.schedule[index];\n"
+		"  cells.forEach(function(cell){cell.classList.toggle('active',parseInt(cell.getAttribute('data-index'),10)===index);});\n"
+		"  var target=schedule[index];\n"
 		"  if(target){\n"
 		"    workouts.forEach(function(card){card.hidden=card.getAttribute('data-name')!==target;});\n"
 		"    if(restBanner){restBanner.hidden=true;}\n"
@@ -588,14 +615,19 @@ static void _emitScripts(FILE * out, ScheduleType type, bool hasSchedule, const 
 		"  minutes+=deltaSeconds*perSecond;\n"
 		"  clock.textContent=format();\n"
 		"  if(GYM.type!=='none'){\n"
-		"    var index=((Math.floor(minutes/1440)%7)+7)%7;\n"
-		"    if(index!==currentDay){currentDay=index;applyDay(index);}\n"
+		"    var absoluteDay=Math.floor(minutes/1440);\n"
+		"    if(absoluteDay!==currentDay){\n"
+		"      currentDay=absoluteDay;\n"
+		"      var weekStart=Math.floor(absoluteDay/7)*7;\n"
+		"      if(weekStart!==currentWeek){renderWeek(weekStart);}\n"
+		"      applyDay(absoluteDay-weekStart);\n"
+		"    }\n"
 		"  }\n"
 		"  updateTimers(deltaSeconds*perSecond*60);\n"
 		"  requestAnimationFrame(loop);\n"
 		"}\n"
 		"setupTimers();\n"
-		"if(GYM.type!=='none'){applyDay(0);currentDay=0;}\n"
+		"if(GYM.type!=='none'){renderWeek(0);applyDay(0);currentDay=0;}\n"
 		"requestAnimationFrame(loop);\n"
 		"})();\n"
 		"</script>\n"
@@ -637,7 +669,7 @@ void executeGenerator(CompilerState * compilerState) {
 		_emitWorkout(out, node->workout);
 	}
 	fputs("</section>\n</main>\n", out);
-	_emitScripts(out, type, hasSchedule, schedule);
+	_emitScripts(out, program, schedule);
 	fclose(out);
 	logInformation(_logger, "Generated %s.", OUTPUT_PATH);
 }
